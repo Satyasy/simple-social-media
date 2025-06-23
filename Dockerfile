@@ -23,7 +23,8 @@ RUN a2dissite 000-default.conf && \
     a2ensite sosmed.conf
 WORKDIR /var/www/sosmed
 RUN ./install.sh
-RUN chown www-data:www-data /var/www/sosmed -R
+RUN chown -R www-data:www-data /var/www/sosmed
+RUN chown -R 755 /var/www/sosmed/bootstrap/cache
 RUN chmod -R 755 /var/www/sosmed
 EXPOSE 8000
 CMD php artisan serve --host=0.0.0.0 --port=8000
