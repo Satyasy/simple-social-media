@@ -10,12 +10,12 @@ RUN apt update -y && \
     php-gd \
     unzip \
     nano  \
-    curl
+    curl \
+    npm \
+    nodejs
 
 RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
     php composer-setup.php --install-dir=/usr/local/bin --filename=composer
-
-RUN curl -fsSL https://raw.githubusercontent.com/mklement0/n-install/stable/bin/n-install | bash -s 22
 
 RUN mkdir /var/www/sosmed
 ADD . /var/www/sosmed
