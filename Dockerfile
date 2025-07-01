@@ -3,7 +3,6 @@ FROM ubuntu:22.04
 RUN apt update -y && \
     DEBIAN_FRONTEND=noninteractive apt install -y apache2 \
     php \
-    npm \
     php-xml \
     php-mbstring \
     php-curl \
@@ -15,6 +14,8 @@ RUN apt update -y && \
 
 RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
     php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
+RUN curl -fsSL https://raw.githubusercontent.com/mklement0/n-install/stable/bin/n-install | bash -s 22
 
 RUN mkdir /var/www/sosmed
 ADD . /var/www/sosmed
