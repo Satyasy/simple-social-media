@@ -1,6 +1,8 @@
 #!/bin/bash
-
-npm install
+git config --global --add safe.directory /var/www/sosmed
+mkdir -p /root/.npm/_logs
+chmod -R 777 /root/.npm
+npm ci || npm install
 npm run dev
 composer install
 cp .env.example .env
