@@ -12,7 +12,6 @@ RUN apt update -y && \
     unzip \
     nano  \
     curl
-
 RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
     php composer-setup.php --install-dir=/usr/local/bin --filename=composer
 
@@ -23,8 +22,7 @@ RUN a2dissite 000-default.conf && \
     a2ensite sosmed.conf
 WORKDIR /var/www/sosmed
 RUN ./install.sh
-RUN chown -R www-data:www-data /var/www/sosmed
-RUN chmod -R 755 /var/www/sosmed/bootstrap/cache
+RUN chown www-data:www-data /var/www/sosmed -R
 RUN chmod -R 755 /var/www/sosmed
 EXPOSE 8000
 CMD php artisan serve --host=0.0.0.0 --port=8000
