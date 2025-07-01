@@ -1,7 +1,9 @@
 FROM ubuntu:22.04
 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update -y && \
-    DEBIAN_FRONTEND=noninteractive apt install -y apache2 \
+    apt install -y \
+    apache2 \
     php \
     php-xml \
     php-mbstring \
@@ -9,10 +11,12 @@ RUN apt update -y && \
     php-mysql \
     php-gd \
     unzip \
-    nano  \
+    nano \
     curl \
     npm \
-    nodejs
+    nodejs \
+    git \
+    supervisor \
 
 RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
     php composer-setup.php --install-dir=/usr/local/bin --filename=composer
