@@ -2,6 +2,9 @@
 
 npm install
 npm run dev
+
+mkdir -p bootstrap/cache
+chmod -R 775 bootstrap/cache
 composer install
 cp .env.example .env
 php artisan key:generate
