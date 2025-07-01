@@ -1,10 +1,13 @@
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update -y && \
-    apt install -y \
+
+# Install dependencies
+RUN apt-get update -y && \
+    apt-get install -y \
     apache2 \
     php \
+    php-cli \
     php-xml \
     php-mbstring \
     php-curl \
@@ -13,34 +16,52 @@ RUN apt update -y && \
     unzip \
     nano \
     curl \
-    npm \
-    nodejs \
     git \
-    supervisor
+    supervisor \
+    lsb-release \
+    ca-certificates \
+    apt-transport-https \
+    software-properties-common
 
+# Install Node.js (using NodeSource to get recent version)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
+
+# Install Composer
 RUN curl -sS https://getcomposer.org/installer -o composer-setup.php && \
-    php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+    php composer-setup.php --install-dir=/usr/local/bin --filename=composer && \
+    rm composer-setup.php
 
-RUN mkdir /var/www/sosmed
-ADD . /var/www/sosmed
-ADD sosmed.conf /etc/apache2/sites-available/
-RUN a2dissite 000-default.conf && \
-    a2ensite sosmed.conf
+# Set working directory
+RUN mkdir -p /var/www/sosmed
 WORKDIR /var/www/sosmed
-#RUN ./install.sh
-RUN npm install
-RUN npm run dev
-RUN composer install
-RUN cp .env.example .env
-RUN php artisan key:generate
-RUN sed -i 's/DB_HOST=127.0.0.1/DB_HOST=172.17.0.2/g' .env && \
-    sed -i 's/DB_PASSWORD=/DB_PASSWORD=password/g' .env && \
-    php artisan migrate && \
-    php artisan db:seed
 
-RUN php artisan storage:link
-RUN chown -R www-data:www-data /var/www/sosmed
-RUN chmod -R 755 /var/www/sosmed/bootstrap/cache
-RUN chmod -R 755 /var/www/sosmed
-EXPOSE 8000
-CMD php artisan serve --host=0.0.0.0 --port=8000
+# Copy source code and Apache config
+COPY . /var/www/sosmed
+COPY sosmed.conf /etc/apache2/sites-available/
+
+# Enable site and rewrite module
+RUN a2dissite 000-default.conf && \
+    a2ensite sosmed.conf && \
+    a2enmod rewrite
+
+# Install PHP dependencies and JS assets
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader && \
+    npm install && \
+    npm run build
+
+# Prepare Laravel
+RUN cp .env.example .env && \
+    php artisan key:generate && \
+    php artisan migrate --force && \
+    php artisan db:seed --force && \
+    php artisan storage:link
+
+# Permissions
+RUN chown -R www-data:www-data /var/www/sosmed && \
+    chmod -R 755 /var/www/sosmed/bootstrap/cache && \
+    chmod -R 755 /var/www/sosmed/storage
+
+EXPOSE 80
+
+CMD ["apachectl", "-D", "FOREGROUND"]
