@@ -1,8 +1,12 @@
 #!/bin/bash
 git config --global --add safe.directory /var/www/sosmed
-mkdir -p /root/.npm/_logs
-chmod -R 777 /root/.npm
-npm ci || npm install
+
+# Use a local npm cache/log directory instead of /root/.npm
+export NPM_CONFIG_CACHE=/tmp/.npm
+mkdir -p /tmp/.npm/_logs
+chmod -R 777 /tmp/.npm
+
+npm ci || npm install --unsafe-perm
 npm run dev
 composer install
 cp .env.example .env
