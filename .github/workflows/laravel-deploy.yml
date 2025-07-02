@@ -11,38 +11,66 @@ jobs:
   run-mysql-in-docker:
     runs-on: self-hosted
     steps:
-      - name: Delete container mysql if exist
+      - name: Delete existing mysql container
         continue-on-error: true
-        run: docker rm -f $(docker ps -a | grep 'mysql\|social\|media' | awk '{print $1}')
+        # Menghapus container mysql yang mungkin sudah ada berdasarkan nama
+        run: docker rm -f $(docker ps -a -q -f name=mysql)
+
+      - name: Create network for MySQL and Laravel (if it doesn't exist)
+        # Membuat custom network agar container mysql dan web bisa berkomunikasi
+        run: docker network create my_laravel_network || true
+
       - name: Running mysql in container
-        run:  docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=social_media -p 3306:3306 mysql:5.7
+        # Menjalankan container MySQL dan menghubungkannya ke network kustom
+        run: docker run -d --name mysql --network my_laravel_network -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=social_media -p 3306:3306 mysql:5.7
+
       - name: List docker container
         run: docker ps -a
+
   build-push-image:
-    needs: run-mysql-in-docker
+    needs: run-mysql-in-docker # Pastikan MySQL sudah berjalan sebelum build image Laravel
     runs-on: self-hosted
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+
       - name: Build Image
+        # Perintah build image Laravel. Migrasi/seeding akan dilakukan di entrypoint.
         run: docker build -t $IMAGE_NAME .
+
       - name: List Image
         run: docker image ls
+
       - name: Login to Docker Registry
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
+
       - name: Push Image
         run: docker push $IMAGE_NAME
 
   deploy-social-media:
-    needs: build-push-image
+    needs: build-push-image # Pastikan image sudah berhasil dibangun dan di-push
     runs-on: self-hosted
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+
       - name: stop and remove existing container
-        run: docker compose down --rmi all
+        # Menghentikan dan menghapus container web yang mungkin sudah berjalan
+        continue-on-error: true # Lanjutkan meskipun container tidak ditemukan
+        run: |
+          docker stop novra-simple-social-media || true # Menghentikan container
+          docker rm novra-simple-social-media || true # Menghapus container
+
       - name: start container
-        run: docker compose up -d
+        # Menjalankan container Laravel (web) dan menghubungkannya ke network yang sama dengan MySQL
+        run: |
+          docker run -d --name novra-simple-social-media \
+            --network my_laravel_network \
+            -p 8000:8000 \
+            $IMAGE_NAME
+
+      - name: Check running containers
+        run: docker ps -a
