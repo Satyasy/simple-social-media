@@ -1,48 +1,51 @@
-name: Laravel application (Mysql)
-run-name: Build, Push and Deploy image simple social media
+name: Laravel Docker CI/CD
+
 on:
   push:
     branches:
       - main
+
 env:
-  IMAGE_NAME: "${{ secrets.DOCKER_USER }}/novra-simple-social-media"
-  DOCKER_USER: "${{ secrets.DOCKER_USER }}"
+  IMAGE_NAME: ${{ secrets.DOCKER_USER }}/novra-simple-social-media:latest
+  DOCKER_USER: ${{ secrets.DOCKER_USER }}
+
 jobs:
-  run-mysql-in-docker:
-    runs-on: self-hosted
+  build-and-push:
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Delete container mysql if exist
-        continue-on-error: true
-        run: docker rm -f $(docker ps -a | grep 'mysql\|social\|media' | awk '{print $1}')
-      - name: Running mysql in container
-        run:  docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=social_media -p 3306:3306 mysql:5.7
-      - name: List docker container
-        run: docker ps -a
-  build-push-image:
-    needs: run-mysql-in-docker
-    runs-on: self-hosted
-    steps:
-      - name: Check out repository code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - name: Build Image
-        run: docker build -t $IMAGE_NAME .
-      - name: List Image
-        run: docker image ls
-      - name: Login to Docker Registry
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
-      - name: Push Image
-        run: docker push $IMAGE_NAME
 
-  deploy-social-media:
-    needs: build-push-image
-    runs-on: self-hosted
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted  # Ganti ke ubuntu-latest jika deploy di server publik
+
     steps:
-      - name: Check out repository code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - name: stop and remove existing container
-        run: docker compose down --rmi all
-      - name: start container
+
+      - name: Stop running containers
+        run: docker compose down
+
+      - name: Pull new image
+        run: docker pull $IMAGE_NAME
+
+      - name: Start updated containers
         run: docker compose up -d
