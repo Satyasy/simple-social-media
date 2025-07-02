@@ -2,6 +2,8 @@
 
 npm install
 npm run dev
+mkdir -p /var/www/sosmed/bootstrap/cache
+chmod -R 777 /var/www/sosmed/bootstrap/cache
 composer install
 cp .env.example .env
 php artisan key:generate
